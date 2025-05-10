@@ -1,0 +1,849 @@
+<!DOCTYPE html>
+<html lang="en" class="light-theme">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>University of Manchester Halls Overview - by Daniel</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" integrity="sha512-iecdLmaskl7CVkqkXNQ/ZH/XLlvWZOJyj7Yy7tcenmpD1ypASozpmT/E0iPtmFIB46ZmdtAc9eNBvH0H/ZpiBw==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+
+    <style>
+        :root {
+            --primary-color-light: #6750A4; --on-primary-color-light: #FFFFFF;
+            --surface-color-light: #FFFBFE; --bg-color-light: #FDF8FD;
+            --text-primary-light: #1D1B20; --text-secondary-light: #49454F;
+            --outline-color-light: #CAC4D0; --table-hover-bg-light: #E8DEF8;
+            --selected-row-bg-light: #D0BCFF; --header-text-color-light: #49454F;
+            --tooltip-bg-light: #322F35; --tooltip-text-light: #F4EFF4;
+
+            --primary-color-dark: #D0BCFF; --on-primary-color-dark: #381E72;
+            --surface-color-dark: #211F26; --bg-color-dark: #1C1B1F;
+            --text-primary-dark: #E6E1E5; --text-secondary-dark: #CAC4D0;
+            --outline-color-dark: #49454F; --table-hover-bg-dark: #3A3843;
+            --selected-row-bg-dark: #534F70; --header-text-color-dark: #CAC4D0;
+            --tooltip-bg-dark: #322F35; --tooltip-text-dark: #F4EFF4;
+        }
+
+        html.light-theme {
+            --primary-color: var(--primary-color-light); --on-primary-color: var(--on-primary-color-light);
+            --surface-color: var(--surface-color-light); --bg-color: var(--bg-color-light);
+            --text-primary: var(--text-primary-light); --text-secondary: var(--text-secondary-light);
+            --outline-color: var(--outline-color-light); --table-hover-bg: var(--table-hover-bg-light);
+            --selected-row-bg: var(--selected-row-bg-light); --header-text-color: var(--header-text-color-light);
+            --tooltip-bg: var(--tooltip-bg-light); --tooltip-text: var(--tooltip-text-light);
+        }
+        html.dark-theme {
+            --primary-color: var(--primary-color-dark); --on-primary-color: var(--on-primary-color-dark);
+            --surface-color: var(--surface-color-dark); --bg-color: var(--bg-color-dark);
+            --text-primary: var(--text-primary-dark); --text-secondary: var(--text-secondary-dark);
+            --outline-color: var(--outline-color-dark); --table-hover-bg: var(--table-hover-bg-dark);
+            --selected-row-bg: var(--selected-row-bg-dark); --header-text-color: var(--header-text-color-dark);
+            --tooltip-bg: var(--tooltip-bg-dark); --tooltip-text: var(--tooltip-text-dark);
+        }
+         html:not(.dark-theme):not(.light-theme) {
+            --primary-color: #6750A4; --on-primary-color: #FFFFFF;
+            --surface-color: #FFFBFE; --bg-color: #FDF8FD;
+            --text-primary: #1D1B20; --text-secondary: #49454F;
+            --outline-color: #CAC4D0; --table-hover-bg: #E8DEF8;
+            --selected-row-bg: #D0BCFF; --header-text-color: #49454F;
+            --tooltip-bg: #322F35; --tooltip-text: #F4EFF4;
+        }
+
+        body { font-family: 'Inter', sans-serif; background-color: var(--bg-color); color: var(--text-primary); transition: background-color 0.2s ease, color 0.2s ease; }
+        html, body { min-height: 100vh; margin: 0; padding: 0; display: flex; flex-direction: column; }
+        .page-wrapper { flex-grow: 1; display: flex; flex-direction: column; }
+
+        .filter-container input[type="text"] {
+            border-radius: 12px; border: 1px solid var(--outline-color); padding: 0.6rem 0.9rem;
+            background-color: var(--surface-color); width: 100%; color: var(--text-primary);
+            transition: border-color 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+        }
+        .filter-container input[type="text"]:focus {
+            border-color: var(--primary-color); box-shadow: 0 0 0 2px color-mix(in srgb, var(--primary-color) 25%, transparent); outline: none;
+        }
+        .price-range-container { display: flex; align-items: center; border: 1px solid var(--outline-color); border-radius: 12px; background-color: var(--surface-color); padding:0; margin-bottom: 0.75rem; overflow: hidden; }
+        .price-range-container input[type="number"] {
+            border: none !important; margin-bottom: 0 !important; box-shadow: none !important; text-align: center;
+            background-color: var(--surface-color); color: var(--text-primary); width: 100%; padding: 0.6rem 0.9rem;
+            -moz-appearance: textfield;
+        }
+        .price-range-container input[type="number"]::-webkit-outer-spin-button,
+        .price-range-container input[type="number"]::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+        .price-range-divider { color: var(--outline-color); padding: 0 0.2rem; font-size: 1em; /* Removed side borders */ }
+
+
+        .checkbox-group-title { display: block; font-size: 0.875rem; font-weight: 600; color: var(--text-secondary); margin-bottom: 0.5rem; }
+        .checkbox-group label { display: inline-flex; align-items: center; margin-right: 1rem; margin-bottom: 0.5rem; cursor: pointer; font-size: 0.875rem; color: var(--text-secondary); }
+        .checkbox-group input[type="checkbox"] {
+            margin-right: 0.4rem; height: 1.1rem; width: 1.1rem; border-radius: 4px;
+            border: 2px solid var(--outline-color); color: var(--primary-color); cursor: pointer; appearance: none;
+            background-color: var(--surface-color); position: relative; transition: background-color 0.2s, border-color 0.2s;
+        }
+        .checkbox-group input[type="checkbox"]:checked { background-color: var(--primary-color); border-color: var(--primary-color); }
+        .checkbox-group input[type="checkbox"]:checked::after { content: '✔'; font-size: 0.8rem; color: var(--on-primary-color); position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); }
+
+        table { width: 100%; border-collapse: separate; border-spacing: 0; margin-top: 0.75rem; background-color: var(--surface-color); box-shadow: 0 2px 8px rgba(0,0,0,.04); border-radius: 12px; overflow: hidden; }
+        th, td { border-bottom: 1px solid var(--outline-color); padding: 0.7rem 0.5rem; text-align: left; font-size: 0.85rem; vertical-align: middle; white-space: nowrap; }
+        th:first-child, td:first-child { padding-left: 0.8rem; width: 28%; } /* Hall Name increased */
+        th:nth-child(2), td:nth-child(2) { width: 15%; text-align:center; } /* Price */
+        th:nth-child(3), td:nth-child(3) { width: 20%; } /* Bathroom */
+        th:nth-child(4), td:nth-child(4) { width: 20%; } /* Catering */
+        th:nth-child(5), td:nth-child(5) { width: 15%; } /* Area */
+        th:last-child, td:last-child { padding-right: 0.8rem; width: auto;} /* Travel */
+
+        th { background-color: color-mix(in srgb, var(--surface-color) 95%, var(--outline-color) 5%); cursor: pointer; user-select: none; color: var(--header-text-color); font-weight: 600; }
+        tr:last-child td { border-bottom: none; }
+        tr:hover { background-color: var(--table-hover-bg); }
+        tr.selected-row { background-color: var(--selected-row-bg) !important; }
+        tr.selected-row td { color: var(--text-primary) !important; font-weight: 500; }
+
+
+        .page-container { max-width: none; padding: 0; flex-grow: 1; }
+        .main-content-area { padding: 0 1rem 1rem 1rem; }
+        .header-title { font-size: 1.25rem; font-weight: 600; color: var(--text-primary); margin-bottom:0.75rem; text-align: center; padding-top:0.5rem; }
+        .filter-section-title { font-size: 1rem; font-weight: 600; margin-bottom: 0.6rem; color: var(--text-primary); }
+        .filter-label { display: block; font-size: 0.875rem; font-weight: 500; color: var(--text-secondary); margin-bottom: 0.25rem; }
+        .sort-indicator { margin-left: 3px; color: var(--text-secondary); font-size: 0.7em; }
+
+        .tooltip { position: relative; display: inline-flex; align-items: center; vertical-align: middle; }
+        .tooltip .tooltip-icon {
+            display: inline-flex; justify-content: center; align-items: center;
+            width: 0.85rem; height: 0.85rem; background-color: var(--text-secondary); color: var(--surface-color);
+            border-radius: 50%; font-size: 0.55rem; cursor: help; margin-left: 0.2rem;
+        }
+        .tooltip .tooltiptext {
+            visibility: hidden;
+            width: 240px;
+            background-color: var(--tooltip-bg);
+            color: var(--tooltip-text);
+            text-align: left;
+            border-radius: 8px;
+            padding: 10px;
+            position: absolute;
+            z-index: 1055 !important; /* Ensure it's above other elements, including Leaflet controls */
+            opacity: 0;
+            transition: opacity 0.2s ease-in-out;
+            font-size: 0.8rem;
+            line-height: 1.5;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+            top: 150%; /* Default to bottom */
+            left: 50%;
+            transform: translateX(-50%);
+            
+            /* MODIFICATIONS TO FIX TEXT OVERFLOW WITHIN TOOLTIP BOX */
+            white-space: normal;     /* Ensures text wraps at spaces */
+            overflow-wrap: break-word; /* Breaks long words if they would overflow */
+            /* word-wrap: break-word; */ /* You can use this older alias if overflow-wrap has compatibility issues for target browsers */
+        }
+        .tooltip .tooltiptext::after { /* Arrow for bottom */
+            content: "";
+            position: absolute;
+            bottom: 100%; /* At the top of the tooltip box */
+            left: 50%;
+            margin-left: -6px;
+            border-width: 6px;
+            border-style: solid;
+            border-color: transparent transparent var(--tooltip-bg) transparent;
+        }
+        .tooltip:hover .tooltiptext {
+            visibility: visible;
+            opacity: 1;
+        }
+
+
+        #results-count { margin-top: 0.75rem; margin-bottom: 0.5rem; font-size: 0.85rem; color: var(--text-secondary); text-align: right; }
+        #map { height: 100%; width: 100%; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,.04); }
+        .legend { padding: 6px 10px; font: 12px/1.6 Arial, Helvetica, sans-serif; background: color-mix(in srgb, var(--surface-color) 95%, transparent); box-shadow: 0 1px 5px rgba(0,0,0,0.15); border-radius: 8px; color: var(--text-secondary); z-index: 500; }
+        .legend i { width: 12px; height: 12px; float: left; margin-right: 6px; opacity: 0.9; border-radius: 50%; border: 1px solid color-mix(in srgb, var(--outline-color) 70%, transparent); }
+        .legend-title { font-weight: bold; margin-bottom: 5px; font-size: 13px; color: var(--text-primary); }
+        .travel-times-cell { white-space: nowrap; font-size: 0.8rem; }
+        .app-footer { background-color: #1a202c; color: #a0aec0; padding: 1.5rem 1rem; text-align: center; font-size: 0.8rem; width: 100%; line-height: 1.6; }
+        html.dark .app-footer { background-color: #0d1117; color: #7d8590; }
+        .app-footer p { margin-bottom: 0.25rem; } .app-footer a { color: #63b3ed; text-decoration: none; } .app-footer a:hover { color: #90cdf4; text-decoration: underline;}
+
+        .tabs { display: flex; border-bottom: 1px solid var(--outline-color); margin-bottom: 1rem; position: relative; }
+        .tabs button {
+            padding: 0.5rem 1rem; margin-right: 0.25rem; border: none;
+            background-color: transparent; color: var(--text-secondary);
+            border-bottom: 3px solid transparent; margin-bottom: -1px; /* Overlap border for active state */
+            border-radius: 0; cursor: pointer; font-weight: 600; transition: color 0.2s, border-color 0.2s;
+            font-size: 0.9rem; position: relative;
+        }
+        .tabs button.active { color: var(--primary-color); border-bottom-color: var(--primary-color); }
+        .tabs button:hover:not(.active) { color: var(--primary-color); }
+        .filter-container { background-color: var(--surface-color); border-radius: 20px; box-shadow: 0 6px 12px rgba(0,0,0,.04); }
+
+        .currency-modal { display: none; position: fixed; z-index: 1051; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.5); justify-content: center; align-items: center; }
+        .currency-modal-content { background-color: var(--surface-color); padding: 1.75rem; border-radius: 20px; box-shadow: 0 8px 24px rgba(0,0,0,0.1); width: auto; min-width: 360px; max-width: 480px; }
+        .currency-modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.25rem; }
+        .currency-modal-title { font-size: 1.25rem; font-weight: 600; color: var(--text-primary); }
+        .currency-modal-close { font-size: 1.5rem; font-weight: bold; cursor: pointer; color: var(--text-secondary); }
+        .currency-modal-close:hover { color: var(--text-primary); }
+        .currency-list-item { display: flex; align-items: center; width: 100%; padding: 0.75rem 0; margin-bottom: 0.3rem; border-bottom: 1px solid var(--outline-color); }
+        .currency-list-item:last-child { border-bottom: none; margin-bottom: 0;}
+        .currency-list-item button.currency-select-btn { /* For the main part of the button */
+            flex-grow: 1; display: flex; align-items: center; background: none; border: none; padding: 0;
+            text-align: left; cursor: pointer; color: var(--text-primary); font-size: 0.9rem;
+        }
+        .currency-list-item button.currency-select-btn:hover .currency-name-full { color: var(--primary-color); }
+        .currency-list-item .flag-icon { font-size: 1.2em; margin-right: 10px; width: 1.5em; text-align: center; }
+        .currency-list-item .currency-details { display: flex; flex-direction: column; flex-grow: 1; }
+        .currency-list-item .currency-name-full { font-weight: 500; }
+        .currency-list-item .rate-display { font-size: 0.75rem; color: var(--text-secondary); }
+
+        .currency-actions { display: flex; align-items: center; margin-left: auto; }
+        .currency-actions .edit-rate-btn {
+            padding: 0.2rem 0.5rem; font-size: 0.75rem;
+            background-color: color-mix(in srgb, var(--primary-color) 15%, transparent); color: var(--primary-color);
+            border: 1px solid color-mix(in srgb, var(--primary-color) 50%, transparent); border-radius: 6px; margin-right: 0.5rem;
+        }
+         .currency-actions .globe-link-btn { padding:0.2rem 0.4rem; font-size:0.75rem; color: var(--text-secondary); }
+         .currency-actions .globe-link-btn:hover { color: var(--primary-color); }
+
+        .currency-list .rate-input-group { display: none; margin-top: 0.5rem; align-items: center; padding: 0.5rem; background-color: color-mix(in srgb, var(--outline-color) 10%, var(--surface-color)); border-radius: 8px; }
+        .currency-list .rate-input-group input { width: calc(100% - 80px); margin-right: 0.5rem; padding: 0.5rem; font-size:0.85rem; border-radius:8px; background-color: var(--surface-color); border: 1px solid var(--outline-color); color: var(--text-primary); }
+        .currency-list .rate-input-group button { width: 70px; padding: 0.5rem; font-size:0.8rem; border-radius:8px; margin-bottom:0; background-color: var(--primary-color); color: var(--on-primary-color); border: none; }
+
+
+        .theme-controls { position: fixed; top: 0.5rem; left: 0.5rem; z-index: 1001; display: flex; gap: 0.5rem; }
+        .theme-controls button {
+            background-color: var(--surface-color); color: var(--text-primary);
+            border: 1px solid var(--outline-color);
+            border-radius: 50%; width: 2rem; height: 2rem; /* Smaller buttons */
+            display: flex; align-items: center; justify-content: center;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.07); cursor: pointer;
+            transition: background-color 0.2s, box-shadow 0.2s;
+        }
+        .theme-controls button:hover { background-color: var(--table-hover-bg); box-shadow: 0 2px 6px rgba(0,0,0,0.1); }
+
+        /* Ensure tooltips are above map controls */
+        .leaflet-control { z-index: 800 !important; }
+        /* .tooltip .tooltiptext { z-index: 1055 !important; } */ /* Already handled above with !important */
+
+    </style>
+</head>
+<body>
+    <div class="page-wrapper">
+        <div class="theme-controls">
+            <button id="theme-toggle-button" title="Toggle Dark/Light Mode">
+                <i class="fas fa-circle-half-stroke"></i>
+            </button>
+        </div>
+
+        <div class="page-container">
+            <div class="main-content-area">
+                <h1 class="header-title">University of Manchester Halls Overview</h1>
+
+                <div class="main-layout-flex lg:flex lg:gap-0 xl:gap-0">
+
+                    <div id="map-column" class="map-column lg:w-[60%] xl:w-[60%] lg:sticky lg:top-4 lg:self-start lg:h-[calc(100vh-2rem-0.5rem)] mb-6 lg:mb-0">
+                        <div id="map-container" class="h-full relative">
+                            <div id="map"></div>
+                        </div>
+                    </div>
+
+                    <div id="controls-column" class="controls-column lg:w-[40%] xl:w-[40%] lg:max-h-[calc(100vh-2rem)] lg:overflow-y-auto lg:pl-4">
+                        <div class="tabs mb-3">
+                            <button id="tab-undergrad" class="active">Undergraduate</button>
+                            <button id="tab-postgrad">Postgraduate</button>
+                        </div>
+                        <div class="filter-container mb-6 p-5 bg-theme-surface rounded-2xl shadow-lg">
+                            <h2 class="filter-section-title">Filter Criteria</h2>
+                            <div class="grid grid-cols-1 gap-x-5 gap-y-4">
+                                <div>
+                                    <label for="hallNameFilter" class="filter-label">Hall Name:</label>
+                                    <input type="text" id="hallNameFilter" placeholder="Enter hall name...">
+                                </div>
+                                <div>
+                                    <label class="filter-label">Price Range (£/week):</label>
+                                    <div class="price-range-container">
+                                        <input type="number" id="minPriceFilter" placeholder="Min" class="rounded-l-xl !rounded-r-none">
+                                        <span class="price-range-divider">-</span>
+                                        <input type="number" id="maxPriceFilter" placeholder="Max" class="!rounded-l-none rounded-r-xl">
+                                    </div>
+                                </div>
+                                <div>
+                                    <span class="checkbox-group-title">Area:</span>
+                                    <div class="checkbox-group flex flex-wrap" id="areaFilterCheckboxes">
+                                        </div>
+                                </div>
+                                <div>
+                                    <span class="checkbox-group-title">Bathroom Type:</span>
+                                    <div class="checkbox-group flex flex-wrap" id="bathroomFilterCheckboxes">
+                                        </div>
+                                </div>
+                                <div>
+                                    <span class="checkbox-group-title">Catering Type:</span>
+                                    <div class="checkbox-group flex flex-wrap" id="cateringFilterCheckboxes">
+                                        </div>
+                                </div>
+                                <a href="https://www.manchester.ac.uk/study/accommodation/student-accommodation/search/" target="_blank" rel="noopener noreferrer" class="inline-block text-center w-full mt-2 px-4 py-2.5 bg-theme-primary text-theme-on-primary rounded-xl hover:opacity-90 transition-opacity text-sm font-medium">
+                                    Further Filters? <i class="fas fa-external-link-alt ml-1 text-xs"></i>
+                                </a>
+                            </div>
+                        </div>
+                        <div id="results-count"></div>
+                        <div class="overflow-x-auto">
+                            <table id="dormsTable">
+                                <thead>
+                                    <tr>
+                                        <th data-sort-key="name">Hall Name <span class="sort-indicator"></span></th>
+                                        <th data-sort-key="price" id="price-header">
+                                            <span class="price-header-text cursor-pointer">Price</span>
+                                            <span class="tooltip tooltip-bottom"><span class="tooltip-icon">?</span><span class="tooltiptext">Prices are 'from' per week (GBP base) and may vary. Long-press price text to change currency. Click price text to sort.</span></span>
+                                            <span class="sort-indicator"></span>
+                                        </th>
+                                        <th data-sort-key="bathroom">Bathroom <span class="sort-indicator"></span></th>
+                                        <th data-sort-key="catering">Catering <span class="sort-indicator"></span></th>
+                                        <th data-sort-key="area">Area <span class="sort-indicator"></span></th>
+                                        <th data-sort-key="walkTime">Travel
+                                            <span class="tooltip tooltip-bottom"><span class="tooltip-icon" style="font-size:0.6rem;">?</span><span class="tooltiptext">W: Walk, C: Cycle, B: Bus (all times in minutes).</span></span>
+                                            <span class="sort-indicator"></span></th>
+                                    </tr>
+                                </thead>
+                                <tbody></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="currencyModal" class="currency-modal" style="display: none;">
+            <div class="currency-modal-content bg-theme-surface">
+                <div class="currency-modal-header">
+                    <h3 class="currency-modal-title text-theme-text-primary">Select Currency & Edit Rates</h3>
+                    <span class="currency-modal-close text-theme-text-secondary" onclick="closeCurrencyModal()">&times;</span>
+                </div>
+                <p class="text-xs text-theme-text-secondary mb-1">Allows custom exchange rate conversion. Rates are illustrative (vs 1 GBP).</p>
+                <p class="text-xs text-theme-text-secondary mb-3" id="mac-os-rate-tip" style="display:none;">Tip: Mac/iOS users can use Spotlight (Cmd+Space) to quickly check live rates (e.g., '1 GBP to EUR').</p>
+                <div class="currency-list">
+                    </div>
+            </div>
+        </div>
+
+        <footer class="app-footer">
+            <p>Please Note: This page is created by Daniel and it is NOT an official website. It is for reference purposes only. Information may not be completely accurate or up-to-date.
+            <br>For official information, please check the <a href="https://www.manchester.ac.uk/study/accommodation/student-accommodation/search/" target="_blank" rel="noopener noreferrer">University of Manchester accommodation website</a>. Data sources: University of Manchester website, Google Maps.
+            <br>This project uses the following open-source technologies: <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">OpenStreetMap</a>, <a href="https://tailwindcss.com/" target="_blank" rel="noopener noreferrer">Tailwind CSS</a>, <a href="https://fontawesome.com/" target="_blank" rel="noopener noreferrer">Font Awesome</a>.
+            </p>
+        </footer>
+
+    <script>
+        // --- Data ---
+        const undergraduateDormsData = [
+            { name: "Ashburne Hall", price: 184, bathroom: "Shared", catering: "Catered", area: "Fallowfield", distance: "1.6 miles", walkTime: 36, cycleTime: 9, busTime: 19, coords: [53.44562872094096, -2.2150761219004256], slug: "ashburne-hall" },
+            { name: "Burkhardt House", price: 175, bathroom: "En suite", catering: "Self-catered", area: "Victoria Park", distance: "0.8 miles", walkTime: 17, cycleTime: 5, busTime: 12, coords: [53.45799821024337, -2.223879868474491], slug: "burkhardt-house" },
+            { name: "Canterbury Court", price: 175, bathroom: "En suite", catering: "Self-catered", area: "Victoria Park", distance: "1.3 miles", walkTime: 28, cycleTime: 7, busTime: 17, coords: [53.45480164932531, -2.214376620737326], slug: "canterbury-court" },
+            { name: "Daisy Bank Hall", price: 218, bathroom: "En suite", catering: "Self-catered", area: "Victoria Park", distance: "1.2 miles", walkTime: 27, cycleTime: 6, busTime: 17, coords: [53.45837243292385, -2.2141646176812104], slug: "daisy-bank-hall" },
+            { name: "Dalton-Ellis Hall", price: 189, bathroom: "Shared / En suite", catering: "Catered", area: "Victoria Park", distance: "1.1 miles", walkTime: 24, cycleTime: 6, busTime: 14, coords: [53.45679709014927, -2.217160899162404], slug: "dalton-ellis-hall" },
+            { name: "Denmark Road", price: 225, bathroom: "En suite", catering: "Self-catered", area: "City campus", distance: "0.5 miles", walkTime: 12, cycleTime: 3, busTime: 9, coords: [53.46065560144875, -2.2314876004852184], slug: "denmark-road" },
+            { name: "Hulme Hall", price: 195, bathroom: "Shared", catering: "Catered", area: "Victoria Park", distance: "0.8 miles", walkTime: 17, cycleTime: 5, busTime: 12, coords: [53.45786012755393, -2.2241001195330936], slug: "hulme-hall" },
+            { name: "Manchester Gardens", price: 255, bathroom: "En suite", catering: "Self-catered", area: "Victoria Park", distance: "1.2 miles", walkTime: 25, cycleTime: 7, busTime: 15, coords: [53.45715568948271, -2.2163979409616], slug: "manchester-gardens" },
+            { name: "Park View", price: 199, bathroom: "En suite", catering: "Self-catered", area: "City campus", distance: "0.9 miles", walkTime: 16, cycleTime: 5, busTime: 12, coords: [53.45851104866131, -2.235426146517156], slug: "park-view" },
+            { name: "Richmond Park", price: 175, bathroom: "En suite", catering: "Self-catered", area: "Fallowfield", distance: "1.8 miles", walkTime: 39, cycleTime: 9, busTime: 20, coords: [53.44503604274731, -2.2136419465178325], slug: "richmond-park" },
+            { name: "Rusholme Place", price: 191, bathroom: "En suite", catering: "Self-catered", area: "Victoria Park", distance: "0.7 miles", walkTime: 15, cycleTime: 5, busTime: 10, coords: [53.45822714246668, -2.2260021772050425], slug: "rusholme-place" },
+            { name: "Saint Anselm Hall", price: 193, bathroom: "Shared", catering: "Catered", area: "Victoria Park", distance: "1.3 miles", walkTime: 28, cycleTime: 7, busTime: 17, coords: [53.455061631422645, -2.2146544753533397], slug: "saint-anselm-hall" },
+            { name: "Sheavyn House", price: 175, bathroom: "En suite", catering: "Self-catered", area: "Fallowfield", distance: "1.5 miles", walkTime: 35, cycleTime: 8, busTime: 17, coords: [53.44565190088724, -2.2166553465177894], slug: "sheavyn-house" },
+            { name: "Unsworth Park", price: 220, bathroom: "En suite", catering: "Self-catered", area: "Fallowfield", distance: "1.9 miles", walkTime: 42, cycleTime: 11, busTime: 22, coords: [53.445076833087654, -2.2121971330257555], slug: "unsworth-park" },
+            { name: "Uttley House", price: 202, bathroom: "En suite", catering: "Self-catered", area: "Fallowfield", distance: "1.9 miles", walkTime: 42, cycleTime: 10, busTime: 22, coords: [53.44359100643122, -2.213152553248015], slug: "uttley-house" },
+            { name: "Weston Hall", price: 192, bathroom: "En suite", catering: "Self-catered", area: "City campus", distance: "0.7 miles", walkTime: 16, cycleTime: 5, busTime: 10, coords: [53.47440968466944, -2.2346862851406724], slug: "weston-hall" },
+            { name: "Whitworth Park", price: 119, bathroom: "Shared", catering: "Self-catered", area: "City campus", distance: "0.4 miles", walkTime: 9, cycleTime: 3, busTime: 8, coords: [53.4620502967688, -2.2311684563053067], slug: "whitworth-park" },
+            { name: "Woolton Hall", price: 184, bathroom: "Shared", catering: "Catered", area: "Fallowfield", distance: "1.9 miles", walkTime: 42, cycleTime: 10, busTime: 22, coords: [53.443426968172716, -2.2150700274701913], slug: "woolton-hall" }
+        ];
+        const postgraduateDormsData = [
+            { name: "Ashburne Hall", price: 184, bathroom: "Shared", catering: "Catered", area: "Fallowfield", distance: "1.6 miles", walkTime: 36, cycleTime: 9, busTime: 19, coords: [53.44562872094096, -2.2150761219004256], slug: "ashburne-hall" },
+            { name: "Horniman House", price: 241, bathroom: "En suite", catering: "Self-catered", area: "City campus", distance: "0.3 miles", walkTime: 7, cycleTime: 3, busTime: 5, coords: [53.46332540531679, -2.2294695372575184], slug: "horniman-house" },
+            { name: "Hulme Hall", price: 195, bathroom: "Shared", catering: "Catered", area: "Victoria Park", distance: "0.8 miles", walkTime: 17, cycleTime: 5, busTime: 12, coords: [53.45786012755393, -2.2241001195330936], slug: "hulme-hall" },
+            { name: "Kincardine Court", price: 275, bathroom: "En suite", catering: "Self-catered", area: "City campus", distance: "0.4 miles", walkTime: 9, cycleTime: 3, busTime: 0, coords: [53.46898710445659, -2.2288756298496915], slug: "kincardine-court" },
+            { name: "Piccadilly Point", price: 216, bathroom: "En suite", catering: "Self-catered", area: "City campus", distance: "0.9 miles", walkTime: 20, cycleTime: 6, busTime: 11, coords: [53.475096398447405, -2.229143969796737], slug: "piccadilly-point" },
+            { name: "Saint Anselm Hall", price: 193, bathroom: "Shared", catering: "Catered", area: "Victoria Park", distance: "1.3 miles", walkTime: 28, cycleTime: 7, busTime: 17, coords: [53.455061631422645, -2.2146544753533397], slug: "saint-anselm-hall" },
+            { name: "Square Gardens", price: 260, bathroom: "En suite", catering: "Self-catered", area: "City campus", distance: "0.7 miles", walkTime: 16, cycleTime: 3, busTime: 11, coords: [53.47148275168241, -2.244382023765089], slug: "square-gardens" },
+            { name: "Uttley House", price: 202, bathroom: "En suite", catering: "Self-catered", area: "Fallowfield", distance: "1.9 miles", walkTime: 42, cycleTime: 10, busTime: 22, coords: [53.44359100643122, -2.213152553248015], slug: "uttley-house" },
+            { name: "Victoria Point", price: 195, bathroom: "Shared / En suite", catering: "Self-catered", area: "Victoria Park", distance: "1.0 miles", walkTime: 22, cycleTime: 5, busTime: 17, coords: [53.459990452465505, -2.2171556600091575], slug: "victoria-point" },
+            { name: "Woolton Hall", price: 184, bathroom: "Shared", catering: "Catered", area: "Fallowfield", distance: "1.9 miles", walkTime: 42, cycleTime: 10, busTime: 22, coords: [53.443426968172716, -2.2150700274701913], slug: "woolton-hall" }
+        ];
+        let currentDormsData = undergraduateDormsData;
+
+        const pointsOfInterest = [
+            { name: "Main Library (UoM)", type: "University", coords: [53.464639897975395, -2.2353691600089496] },
+            { name: "Kilburn Building (CompSci)", type: "University", coords: [53.467646718375896, -2.233638221913351] },
+            { name: "Students' Union (UoM)", type: "University", coords: [53.46448355318123, -2.2320694428131107] },
+            { name: "Alan Gilbert Learning Commons", type: "University", coords: [53.464917326177726, -2.233219071649095]},
+            { name: "The University of Manchester (Campus Centre)", type: "University", coords: [53.465838558133065, -2.2327060023369105]}
+        ];
+        const markerColors = { "Fallowfield": "#F59E0B", "Victoria Park": "#10B981", "City campus": "#3B82F6", "University": "#8B5CF6" };
+        
+        let currentSortKey = null, currentSortOrder = 'asc', map, currentPopupTimeout = null;
+        const hallMarkers = {}, poiMarkers = [];
+        let selectedHallNames = new Set();
+        let currentCurrency = 'GBP';
+        let exchangeRates = { GBP: 1, EUR: 1.17, USD: 1.27, CAD: 1.73, AUD: 1.91, CNY: 9.15, HKD: 9.93, JPY: 198.5 };
+        const currencySymbols = { GBP: '🇬🇧 £', EUR: '🇪🇺 €', USD: '🇺🇸 $', CAD: '🇨🇦 CA$', AUD: '🇦🇺 A$', CNY: '🇨🇳 ¥', HKD: '🇭🇰 HK$', JPY: '🇯🇵 ¥' };
+        const currencyFullName = { GBP: 'GBP (British Pound)', EUR: 'EUR (Euro)', USD: 'USD (US Dollar)', CAD: 'CAD (Canadian Dollar)', AUD: 'AUD (Australian Dollar)', CNY: 'CNY (Chinese Yuan)', HKD: 'HKD (Hong Kong Dollar)', JPY: 'JPY (Japanese Yen)'};
+
+        let tableBody, hallNameFilter, areaCheckboxesContainer, bathroomCheckboxesContainer, cateringCheckboxesContainer,
+            minPriceFilter, maxPriceFilter, headers, resultsCountEl, tabUndergrad, tabPostgrad, priceHeader,
+            currencyModal, themeToggleButton, themeIcon, macOSRateTip;
+
+
+        // --- All other functions (getMarkerOptions, clearMapMarkers, populateMap, initMap, updateAllMarkerStyles, renderTable, etc.) go here ---
+        // --- Make sure they are defined before being called, or hoist them if necessary ---
+
+        // (The rest of the JavaScript code from the previous version, with modifications for new features and bug fixes)
+        // ... (Full JS from previous version, adapted for new DOM elements and logic for theme picker, currency edit etc.)
+
+        // Helper function to get marker styling based on type/area, selection, and hover state
+        function getMarkerOptions(item, itemCategory, isSelected = false, isHovered = false) {
+            let color;
+            let radius = isSelected ? 10 : (isHovered ? 9 : (itemCategory === 'dorm' ? 7 : 6));
+            let fillOpacity = isSelected ? 0.9 : (isHovered ? 0.85 : (itemCategory === 'dorm' ? 0.75 : 0.65));
+            let weight = isSelected ? 2.5 : (isHovered ? 2 : 1);
+            let currentOpacity = 1;
+
+            if (itemCategory === 'dorm') color = markerColors[item.area] || 'var(--text-secondary)';
+            else color = markerColors[item.type] || 'var(--text-primary)';
+            
+            if (item.name === "The University of Manchester (Campus Centre)") {
+                radius = isSelected ? 16 : (isHovered ? 15 : 14);
+                fillOpacity = isSelected ? 0.6 : (isHovered ? 0.55 : 0.5);
+                weight = 2;
+            }
+
+            if (selectedHallNames.size > 0 && !isSelected && !isHovered && itemCategory === 'dorm' && !selectedHallNames.has(item.name)) {
+                fillOpacity = 0.2; currentOpacity = 0.3;
+            }
+            return { radius, fillColor: color, color: "var(--outline-color)", weight, opacity: currentOpacity, fillOpacity, dashArray: '' };
+        }
+
+        function clearMapMarkers() {
+            if (!map) return;
+            Object.values(hallMarkers).forEach(marker => map.removeLayer(marker));
+            poiMarkers.forEach(marker => map.removeLayer(marker));
+            for (const key in hallMarkers) delete hallMarkers[key];
+            poiMarkers.length = 0;
+        }
+
+        function populateMap() {
+            if (!map) return;
+            clearMapMarkers();
+            const mainUniPoi = pointsOfInterest.find(p => p.name === "The University of Manchester (Campus Centre)");
+            if (mainUniPoi) {
+                const uniMarker = L.circleMarker(mainUniPoi.coords, getMarkerOptions(mainUniPoi, 'poi'))
+                .addTo(map).bindPopup(`<b>${mainUniPoi.name}</b>`).on('click', (e) => {
+                    e.target.openPopup();
+                    map.setView(e.target.getLatLng(), map.getZoom() < 15 ? 15 : map.getZoom());
+                });
+                poiMarkers.push(uniMarker);
+            }
+
+            currentDormsData.forEach(dorm => {
+                if (dorm.coords) {
+                    const markerOpt = getMarkerOptions(dorm, 'dorm', selectedHallNames.has(dorm.name));
+                    const hallPageUrl = `https://www.manchester.ac.uk/study/accommodation/student-accommodation/search/${dorm.slug}/`;
+                    const popupContent = `<b><a href="${hallPageUrl}" target="_blank" rel="noopener noreferrer" style="color: var(--primary-color); text-decoration: underline;">${dorm.name}</a></b><br>Area: ${dorm.area}<br>Price: ${currencySymbols[currentCurrency].split(' ')[1]}${(dorm.price * exchangeRates[currentCurrency]).toFixed(0)}<br>Walk: ${dorm.walkTime}m, Cycle: ${dorm.cycleTime}m, Bus: ${dorm.busTime}m`;
+                    const marker = L.circleMarker(dorm.coords, markerOpt).addTo(map).bindPopup(popupContent);
+                    hallMarkers[dorm.name] = marker;
+                }
+            });
+
+            pointsOfInterest.forEach(poi => {
+                if (poi.coords && poi.type === "University" && poi.name !== "The University of Manchester (Campus Centre)") {
+                    const markerOpt = getMarkerOptions(poi, 'poi');
+                    const marker = L.circleMarker(poi.coords, markerOpt).addTo(map)
+                        .bindPopup(`<b>${poi.name}</b><br>Type: ${poi.type}`);
+                    poiMarkers.push(marker);
+                }
+            });
+            updateAllMarkerStyles();
+        }
+        function initMap() {
+            const mapElement = document.getElementById('map');
+            if (mapElement) {
+                if (map) { map.remove(); map = null; }
+                map = L.map(mapElement, { preferCanvas: true, attributionControl: false }).setView([53.459, -2.225], 13);
+                L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager_labels_under/{z}/{x}/{y}{r}.png', {
+                    maxZoom: 19, attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a> &copy; <a href="https://carto.com/attributions">CARTO</a>'
+                }).addTo(map);
+                L.control.attribution({position: 'bottomleft', prefix: ''}).addTo(map);
+
+                populateMap();
+                const legend = L.control({position: 'bottomright'});
+                legend.onAdd = function () {
+                    const div = L.DomUtil.create('div', 'info legend');
+                    div.innerHTML += '<div class="legend-title">Legend</div>';
+                    const legendOrder = ["Fallowfield", "Victoria Park", "City campus", "University"];
+                    legendOrder.forEach(key => {
+                        if (markerColors[key]) {
+                             div.innerHTML += `<i style="background:${markerColors[key]}; border-color: var(--outline-color);"></i> ${ (key === 'City campus' ? 'City Campus Halls' : key === 'Fallowfield' ? 'Fallowfield Halls' : key === 'Victoria Park' ? 'Victoria Park Halls' : key === 'University' ? 'University Sites' : key) }<br>`;
+                        }
+                    });
+                    return div;
+                };
+                legend.addTo(map);
+                setTimeout(() => { if(map) map.invalidateSize(); }, 200);
+            } else {
+                console.error("Map container ('map') not found in DOM!");
+            }
+        }
+        
+        function updateAllMarkerStyles() {
+            if (!map) return;
+            Object.entries(hallMarkers).forEach(([name, marker]) => {
+                const dorm = currentDormsData.find(d => d.name === name);
+                if (dorm && map.hasLayer(marker)) marker.setStyle(getMarkerOptions(dorm, 'dorm', selectedHallNames.has(name)));
+            });
+            const dimPOIs = selectedHallNames.size > 0;
+            poiMarkers.forEach(pm => {
+                if (map.hasLayer(pm)) {
+                    const popupContent = pm.getPopup() ? pm.getPopup().getContent() : '';
+                    const originalPoiNameMatch = popupContent.match(/<b>(.*?)<\/b>/);
+                    if (originalPoiNameMatch && originalPoiNameMatch[1]) {
+                        const originalPoiName = originalPoiNameMatch[1];
+                        const originalPoi = pointsOfInterest.find(p => p.name === originalPoiName);
+                        if(originalPoi) {
+                            const baseStyle = getMarkerOptions(originalPoi, 'poi');
+                            pm.setStyle({ ...baseStyle, fillOpacity: dimPOIs ? 0.1 : baseStyle.fillOpacity, opacity: dimPOIs ? 0.2 : baseStyle.opacity });
+                        }
+                    }
+                }
+            });
+        }
+        
+        function renderTable(dataToRender) {
+            if (!tableBody || !resultsCountEl) return;
+            tableBody.innerHTML = '';
+            resultsCountEl.textContent = `Showing ${dataToRender.length} of ${currentDormsData.length} halls.`;
+            if (dataToRender.length === 0) {
+                const row = tableBody.insertRow(); const cell = row.insertCell(); cell.colSpan = 6;
+                cell.textContent = 'No halls found matching your criteria.'; cell.style.textAlign = 'center'; cell.style.padding = '1rem';
+            } else {
+                dataToRender.forEach(dorm => {
+                    const row = tableBody.insertRow(); row.dataset.hallName = dorm.name;
+                    if (selectedHallNames.has(dorm.name)) row.classList.add('selected-row');
+                    row.insertCell().textContent = dorm.name;
+                    const priceInCurrentCurrency = (dorm.price * exchangeRates[currentCurrency]).toFixed(0);
+                    row.insertCell().textContent = `${currencySymbols[currentCurrency].split(' ')[1]}${priceInCurrentCurrency}`;
+                    row.insertCell().textContent = dorm.bathroom; row.insertCell().textContent = dorm.catering; row.insertCell().textContent = dorm.area;
+                    const travelCell = row.insertCell(); travelCell.classList.add('travel-times-cell');
+                    travelCell.innerHTML = `W:${dorm.walkTime} C:${dorm.cycleTime} B:${dorm.busTime}`;
+
+                    row.addEventListener('click', () => {
+                        const hallName = row.dataset.hallName; row.classList.toggle('selected-row');
+                        if (selectedHallNames.has(hallName)) selectedHallNames.delete(hallName);
+                        else selectedHallNames.add(hallName);
+                        updateAllMarkerStyles();
+                        const marker = hallMarkers[hallName];
+                        if (marker && map.hasLayer(marker) && selectedHallNames.has(hallName)) { marker.openPopup(); marker.bringToFront(); }
+                        else if (marker && map.hasLayer(marker)) marker.closePopup();
+                    });
+                    row.addEventListener('mouseover', () => {
+                        clearTimeout(currentPopupTimeout);
+                        const marker = hallMarkers[dorm.name];
+                        if (marker && map.hasLayer(marker)) {
+                            marker.setStyle(getMarkerOptions(dorm, 'dorm', selectedHallNames.has(dorm.name), true));
+                            marker.openPopup(); marker.bringToFront();
+                        }
+                    });
+                    row.addEventListener('mouseout', () => {
+                        const marker = hallMarkers[dorm.name];
+                         if (marker && map.hasLayer(marker)) { 
+                            if (!selectedHallNames.has(dorm.name)) { 
+                                currentPopupTimeout = setTimeout(() => {
+                                    if (map.hasLayer(marker) && !selectedHallNames.has(dorm.name)) { 
+                                        marker.closePopup();
+                                    }
+                                }, 350);
+                            }
+                            marker.setStyle(getMarkerOptions(dorm, 'dorm', selectedHallNames.has(dorm.name)));
+                        }
+                    });
+                });
+            }
+            updateAllMarkerStyles();
+        }
+
+        function getSelectedCheckboxValues(name) { return Array.from(document.querySelectorAll(`input[name="${name}"]:checked`)).map(cb => cb.value); }
+        function applyFilters() {
+            if (!hallNameFilter) return; 
+            const nameQuery = hallNameFilter.value.toLowerCase();
+            const selectedAreas = getSelectedCheckboxValues('area');
+            const selectedBathrooms = getSelectedCheckboxValues('bathroom');
+            const selectedCaterings = getSelectedCheckboxValues('catering');
+            const minPrice = parseFloat(minPriceFilter.value) || 0;
+            const maxPrice = parseFloat(maxPriceFilter.value) || Infinity;
+            let filteredDorms = currentDormsData.filter(dorm => {
+                const matchesName = dorm.name.toLowerCase().includes(nameQuery);
+                const matchesArea = selectedAreas.length === 0 || selectedAreas.includes(dorm.area);
+                const matchesCatering = selectedCaterings.length === 0 || selectedCaterings.includes(dorm.catering);
+                const matchesPrice = dorm.price >= minPrice && dorm.price <= maxPrice;
+                let matchesBathroomLogic = selectedBathrooms.length === 0 ? true : selectedBathrooms.some(opt => (opt === "Shared" && (dorm.bathroom === "Shared" || dorm.bathroom === "Shared / En suite")) || (opt === "En suite" && (dorm.bathroom === "En suite" || dorm.bathroom === "Shared / En suite")));
+                return matchesName && matchesArea && matchesBathroomLogic && matchesCatering && matchesPrice;
+            });
+            if (currentSortKey) filteredDorms = sortData(filteredDorms, currentSortKey, currentSortOrder);
+            renderTable(filteredDorms);
+        }
+        function sortData(data, key, order) {
+            return [...data].sort((a, b) => {
+                let vA = a[key], vB = b[key];
+                if (key === 'price' || key === 'walkTime' || key === 'cycleTime' || key === 'busTime') { vA = parseFloat(vA); vB = parseFloat(vB); }
+                else if (typeof vA === 'string') { vA = vA.toLowerCase(); vB = vB.toLowerCase(); }
+                if (vA < vB) return order === 'asc' ? -1 : 1; if (vA > vB) return order === 'asc' ? 1 : -1; return 0;
+            });
+        }
+        function updateSortIndicators() { if(headers) headers.forEach(h => { const i = h.querySelector('.sort-indicator'); if (i) i.textContent = h.dataset.sortKey === currentSortKey ? (currentSortOrder === 'asc' ? '▲' : '▼') : ''; }); }
+        
+        function setupEventListeners() {
+            if(headers) {
+                headers.forEach(header => {
+                    const sortKey = header.dataset.sortKey;
+                    if (sortKey && sortKey !== 'price') { 
+                        header.addEventListener('click', () => {
+                            currentSortOrder = (currentSortKey === sortKey && currentSortOrder === 'asc') ? 'desc' : 'asc';
+                            currentSortKey = sortKey;
+                            applyFilters(); updateSortIndicators();
+                        });
+                    }
+                });
+            }
+
+            if(tabUndergrad) tabUndergrad.addEventListener('click', () => switchTab('undergrad'));
+            if(tabPostgrad) tabPostgrad.addEventListener('click', () => switchTab('postgrad'));
+            
+            if (priceHeader) {
+                const priceTextElement = priceHeader.querySelector('.price-header-text');
+                let pressTimerPrice;
+                let longPressPriceTriggered = false;
+
+                if(priceTextElement) {
+                    priceTextElement.addEventListener('click', (e) => { 
+                         if (longPressPriceTriggered) { 
+                            longPressPriceTriggered = false;
+                            return;
+                        }
+                        currentSortOrder = (currentSortKey === 'price' && currentSortOrder === 'asc') ? 'desc' : 'asc';
+                        currentSortKey = 'price';
+                        applyFilters(); updateSortIndicators();
+                    });
+                    
+                    const priceInteractiveElements = [priceTextElement, priceHeader.querySelector('.tooltip-icon')];
+                    priceInteractiveElements.forEach(el => {
+                        if(el) {
+                            el.addEventListener('mousedown', (e) => {
+                                longPressPriceTriggered = false;
+                                pressTimerPrice = window.setTimeout(() => {
+                                    openCurrencyModal();
+                                    longPressPriceTriggered = true;
+                                }, 700);
+                            });
+                            el.addEventListener('mouseup', () => clearTimeout(pressTimerPrice));
+                            el.addEventListener('mouseleave', () => clearTimeout(pressTimerPrice));
+                            el.addEventListener('touchstart', () => {
+                                longPressPriceTriggered = false;
+                                pressTimerPrice = window.setTimeout(() => {
+                                    openCurrencyModal();
+                                    longPressPriceTriggered = true;
+                                }, 700);
+                            }, {passive: true});
+                            el.addEventListener('touchend', () => clearTimeout(pressTimerPrice));
+                        }
+                    });
+                }
+            }
+
+
+            if(hallNameFilter) hallNameFilter.addEventListener('input', applyFilters);
+            if(areaCheckboxesContainer) areaCheckboxesContainer.addEventListener('change', applyFilters);
+            if(bathroomCheckboxesContainer) bathroomCheckboxesContainer.addEventListener('change', applyFilters);
+            if(cateringCheckboxesContainer) cateringCheckboxesContainer.addEventListener('change', applyFilters);
+            if(minPriceFilter) minPriceFilter.addEventListener('input', applyFilters);
+            if(maxPriceFilter) maxPriceFilter.addEventListener('input', applyFilters);
+            if(themeToggleButton) themeToggleButton.addEventListener('click', () => {
+                const isDark = document.documentElement.classList.contains('dark-theme');
+                localStorage.setItem('theme', !isDark ? 'dark' : 'light');
+                applyDarkMode(!isDark);
+            });
+
+            window.onclick = (event) => { if (currencyModal && event.target == currencyModal) closeCurrencyModal(); }
+        }
+
+        function switchTab(studentType) {
+            currentDormsData = studentType === 'undergrad' ? undergraduateDormsData : postgraduateDormsData;
+            if(tabUndergrad) tabUndergrad.classList.toggle('active', studentType === 'undergrad');
+            if(tabPostgrad) tabPostgrad.classList.toggle('active', studentType === 'postgrad');
+            selectedHallNames.clear(); 
+            document.querySelectorAll('.checkbox-group input[type="checkbox"]').forEach(cb => cb.checked = false);
+            if(hallNameFilter) hallNameFilter.value = '';
+            if(minPriceFilter) minPriceFilter.value = '';
+            if(maxPriceFilter) maxPriceFilter.value = '';
+            populateMap(); 
+            applyFilters();
+        }
+        
+        function openCurrencyModal() { if(currencyModal) currencyModal.style.display = 'flex'; updateRateDisplayInModal(); }
+        function closeCurrencyModal() { if(currencyModal) currencyModal.style.display = 'none'; }
+        function changeCurrency(newCurrency) { currentCurrency = newCurrency; applyFilters(); closeCurrencyModal(); }
+        
+        function updateRateDisplayInModal() {
+            if (!currencyModal) return;
+            const currencyListDiv = currencyModal.querySelector('.currency-list');
+            if (!currencyListDiv) return;
+            currencyListDiv.innerHTML = ''; 
+
+            Object.keys(currencySymbols).forEach(currency => {
+                const listItem = document.createElement('div'); // Use a div for better flex control
+                listItem.className = 'currency-list-item';
+
+
+                const button = document.createElement('button');
+                button.className = 'currency-select-btn';
+                button.onclick = () => changeCurrency(currency);
+                
+                const flagSpan = document.createElement('span');
+                flagSpan.className = 'flag-icon text-lg';
+                flagSpan.textContent = currencySymbols[currency].split(' ')[0];
+                
+                const detailsDiv = document.createElement('div');
+                detailsDiv.className = 'currency-details';
+                
+                const nameSpan = document.createElement('span');
+                nameSpan.className = 'currency-name-full';
+                nameSpan.textContent = currencyFullName[currency];
+                detailsDiv.appendChild(nameSpan);
+
+                if (currency !== 'GBP') {
+                    const rateDisplaySpan = document.createElement('span');
+                    rateDisplaySpan.className = 'rate-display';
+                    rateDisplaySpan.id = `rate-display-${currency}`;
+                    rateDisplaySpan.textContent = `(1 GBP = ${exchangeRates[currency].toFixed(4)} ${currency})`;
+                    detailsDiv.appendChild(rateDisplaySpan);
+                }
+
+                button.appendChild(flagSpan);
+                button.appendChild(detailsDiv);
+                listItem.appendChild(button);
+
+
+                if (currency !== 'GBP') {
+                    const actionsDiv = document.createElement('div');
+                    actionsDiv.className = 'currency-actions';
+
+                    const editBtn = document.createElement('span');
+                    editBtn.className = 'edit-rate-btn';
+                    editBtn.textContent = 'Edit';
+                    editBtn.onclick = (e) => { e.stopPropagation(); toggleRateEdit(currency); };
+                    actionsDiv.appendChild(editBtn);
+
+                    const globeBtn = document.createElement('a');
+                    globeBtn.className = 'globe-link-btn';
+                    globeBtn.href = `https://www.google.com/search?q=1+gbp+to+${currency.toLowerCase()}`;
+                    globeBtn.target = "_blank";
+                    globeBtn.rel = "noopener noreferrer";
+                    globeBtn.innerHTML = '<i class="fas fa-globe"></i>';
+                    globeBtn.onclick = (e) => e.stopPropagation();
+                    actionsDiv.appendChild(globeBtn);
+                    listItem.appendChild(actionsDiv);
+                }
+                currencyListDiv.appendChild(listItem);
+
+                if (currency !== 'GBP') {
+                    const inputGroup = document.createElement('div');
+                    inputGroup.className = 'rate-input-group p-2 rounded-md'; 
+                    inputGroup.id = `rate-input-${currency}`;
+                    inputGroup.style.display = 'none';
+                    const inputField = document.createElement('input');
+                    inputField.type = 'number'; inputField.step = '0.0001';
+                    inputField.placeholder = 'Rate vs 1 GBP'; inputField.value = exchangeRates[currency].toFixed(4);
+                    inputField.style.backgroundColor = 'var(--surface-color)'; 
+                    inputField.style.color = 'var(--text-primary)';
+                    inputField.style.borderColor = 'var(--outline-color)';
+                    const saveBtn = document.createElement('button');
+                    saveBtn.textContent = 'Save';
+                    saveBtn.onclick = () => saveRate(currency);
+                    inputGroup.appendChild(inputField); inputGroup.appendChild(saveBtn);
+                    listItem.appendChild(inputGroup); // Append input group to list item for better structure
+                }
+            });
+        }
+
+        function toggleRateEdit(currency) {
+            const inputGroup = document.getElementById(`rate-input-${currency}`);
+            if (inputGroup) {
+                inputGroup.style.display = inputGroup.style.display === 'none' || inputGroup.style.display === '' ? 'flex' : 'none';
+                if (inputGroup.style.display === 'flex') inputGroup.querySelector('input').focus();
+            }
+        }
+        function saveRate(currency) {
+            const inputField = document.getElementById(`rate-input-${currency}`).querySelector('input');
+            const newRate = parseFloat(inputField.value);
+            if (!isNaN(newRate) && newRate > 0) {
+                exchangeRates[currency] = newRate;
+                updateRateDisplayInModal(); applyFilters();
+                document.getElementById(`rate-input-${currency}`).style.display = 'none';
+            } else alert('Please enter a valid positive number for the exchange rate.');
+        }
+        
+        function applyDarkMode(isDark) {
+            document.documentElement.classList.toggle('dark-theme', isDark);
+            document.documentElement.classList.toggle('light-theme', !isDark);
+            if (themeIcon) themeIcon.className = isDark ? 'fas fa-sun' : 'fas fa-moon';
+            if (map) populateMap();
+        }
+        
+        window.addEventListener('DOMContentLoaded', () => {
+            tableBody = document.getElementById('dormsTable').getElementsByTagName('tbody')[0];
+            hallNameFilter = document.getElementById('hallNameFilter');
+            areaCheckboxesContainer = document.getElementById('areaFilterCheckboxes');
+            bathroomCheckboxesContainer = document.getElementById('bathroomFilterCheckboxes');
+            cateringCheckboxesContainer = document.getElementById('cateringFilterCheckboxes');
+            minPriceFilter = document.getElementById('minPriceFilter');
+            maxPriceFilter = document.getElementById('maxPriceFilter');
+            headers = document.querySelectorAll('#dormsTable th');
+            resultsCountEl = document.getElementById('results-count');
+            tabUndergrad = document.getElementById('tab-undergrad');
+            tabPostgrad = document.getElementById('tab-postgrad');
+            priceHeader = document.getElementById('price-header');
+            currencyModal = document.getElementById('currencyModal'); 
+            if (currencyModal) { 
+                 const currencyModalContent = currencyModal.querySelector('.currency-modal-content');
+                 if(currencyModalContent) { 
+                    const currencyList = currencyModalContent.querySelector('.currency-list');
+                    if(!currencyList && currencyModalContent) { 
+                        const newList = document.createElement('div');
+                        newList.className = 'currency-list';
+                        currencyModalContent.appendChild(newList);
+                    }
+                 }
+            }
+
+            themeToggleButton = document.getElementById('theme-toggle-button');
+            if(themeToggleButton) themeIcon = themeToggleButton.querySelector('i');
+            macOSRateTip = document.getElementById('mac-os-rate-tip');
+
+            const areaOptions = ["Fallowfield", "Victoria Park", "City campus"];
+            if(areaCheckboxesContainer) areaOptions.forEach(opt => areaCheckboxesContainer.innerHTML += `<label><input type="checkbox" name="area" value="${opt}"> ${opt}</label>`);
+            const bathroomOptions = ["Shared", "En suite"];
+            if(bathroomCheckboxesContainer) bathroomOptions.forEach(opt => bathroomCheckboxesContainer.innerHTML += `<label><input type="checkbox" name="bathroom" value="${opt}"> ${opt}</label>`);
+            const cateringOptions = ["Catered", "Self-catered"];
+            if(cateringCheckboxesContainer) cateringOptions.forEach(opt => cateringCheckboxesContainer.innerHTML += `<label><input type="checkbox" name="catering" value="${opt}"> ${opt}</label>`);
+
+            if (navigator.platform.toUpperCase().indexOf('MAC') >= 0 || ['iPhone','iPad','iPod'].includes(navigator.platform)) {
+                if(macOSRateTip) macOSRateTip.style.display = 'block';
+            }
+
+            const preferredDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+            const savedTheme = localStorage.getItem('theme');
+            applyDarkMode(savedTheme ? savedTheme === 'dark' : preferredDark);
+
+            initMap();
+            renderTable(currentDormsData);
+            updateRateDisplayInModal();
+            setupEventListeners();
+        });
+        window.onload = () => { if (map) map.invalidateSize(); };
+    </script>
+</body>
+</html>
